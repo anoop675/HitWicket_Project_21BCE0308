@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess-like Game</title>
+    <style>
+        /* Add some basic styling */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(5, 50px);
+            grid-gap: 1px;
+            margin: 20px auto;
+            max-width: 260px;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #eee;
+        }
+        .cell:nth-child(odd) {
+            background-color: #ddd;
+        }
+        .highlight {
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <h2>Current Player: <span id="currentPlayer"></span></h2>
+        <div id="board" class="board"></div>
+        <div id="moves"></div>
+        <button id="startGame">Start New Game</button>
+    </div>
+    <script>
+        const boardElement = document.getElementById('board');
+        const currentPlayerElement = document.getElementById('currentPlayer');
+        const movesElement = document.getElementById('moves');
+        const startGameButton = document.getElementById('startGame');
+
+        //let socket;
+		const socket;
+        function initWebSocket() {
+            socket = new WebSocket('ws://localhost:8080/game');
+
+            socket.onopen = () => {
+                console.log('WebSocket connection opened');
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    updateBoard(data.board);
+                    currentPlayerElement.textContent = data.currentPlayer;
+                }
+            };
+
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket connection closed');
+            };
+        }
+
+        function updateBoard(board) {
+            boardElement.innerHTML = '';
+            board.forEach(row => {
+                row.forEach(cell => {
+                    const cellElement = document.createElement('div');
+                    cellElement.className = 'cell';
+                    cellElement.textContent = cell || '';
+                    boardElement.appendChild(cellElement);
+                });
+            });
+        }
+
+        function startNewGame() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'initialize' }));
+            } else {
+                console.error('WebSocket connection is not open');
+            }
+        }
+
+        function makeMove(piece, move) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'move', player: 'A', piece: piece, move: move }));
+            } else {
+                console.error('WebSocket connection is not open');
+            }
+        }
+
+        startGameButton.addEventListener('click', startNewGame);
+
+        initWebSocket();
+    </script>
+</body>
+</html>
